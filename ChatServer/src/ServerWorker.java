@@ -12,15 +12,12 @@ public class ServerWorker extends Thread {
     private Optional<String> aLogin; // user logged in if applicable
     private Server server;
 
-    // Boilerplate
     public ServerWorker(Server server, Socket pClientSocket) {
         this.aClientSocket = pClientSocket;
         this.server = server;
     }
 
-    public String getLogin() {
-        return aLogin.get();
-    }
+
 
     public void run() {
         try {
@@ -113,5 +110,9 @@ public class ServerWorker extends Thread {
             String finalMessage = new Date() + " New Message: " + msg + "\n";
             outputStream.write(finalMessage.getBytes());
         }
+    }
+
+    public String getLogin() {
+        return aLogin.get();
     }
 }
