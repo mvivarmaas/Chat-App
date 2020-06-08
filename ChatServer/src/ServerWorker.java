@@ -1,16 +1,15 @@
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class ServerWorker extends Thread {
     private final Socket aClientSocket; // Client socket
     private Optional<String> aLogin; // user logged in if applicable
     private Server server;
+    private Set<String> topicSet = new HashSet<>();
 
     public ServerWorker(Server server, Socket pClientSocket) {
         this.aClientSocket = pClientSocket;
@@ -44,6 +43,14 @@ public class ServerWorker extends Thread {
                     break;
                 } else if(cmd.equalsIgnoreCase("login")) {
                     handleLogin(outputStream, tokens);
+
+                } else if(cmd.equalsIgnoreCase("msg")) {
+                    String[] msgTokens = StringUtils.split(line, null, 3);
+                    handleMessage(msgTokens);
+                } else if(cmd.equalsIgnoreCase("join")) {
+                    handleJoin(tokens);
+                } else if(cmd.equalsIgnoreCase("leave")) {
+                    handleLeave(tokens);
                 } else {
                     String msg = "Unknown command: " + cmd + "\n";
                     outputStream.write(msg.getBytes());
@@ -55,7 +62,45 @@ public class ServerWorker extends Thread {
         client.close();
     }
 
+    private void handleLeave(String[] tokens) {
+        if(tokens.length>1) {
+            this.topicSet.remove(tokens[1]);
+        }
+    }
+
+    private void handleJoin(String[] tokens) {
+        if(tokens.length > 1) {
+            String topic = tokens[1];
+
+            topicSet.add(topic);
+        }
+    }
+
+    // Format: msg <name> <message>
+    private void handleMessage(String[] tokens) throws IOException {
+        String sendTo  = tokens[1];
+        String body = tokens[2];
+
+        boolean isTopic = sendTo.charAt(0) == '#';
+
+        List<ServerWorker> serverWorkers = server.getServerWorkers();
+        String msg = "Msg From: " + this.aLogin.get() + ": " + body + "\n";
+
+        for(ServerWorker s : serverWorkers) {
+            if(isTopic) {
+                if(s.isMemberOfTopic(sendTo)) {
+
+                    s.send("Topic :" + sendTo + " " + msg);
+                }
+
+            } else if(s.getLogin().equalsIgnoreCase(sendTo)) {
+                s.send(msg);
+            }
+        }
+    }
+
     private void handleQuit() throws IOException {
+        server.removeWorker(this);
         for(ServerWorker s : server.getServerWorkers()) {
             if(s.equals(this)) continue;
             s.send(this.getLogin() + " has logged off.");
@@ -64,7 +109,7 @@ public class ServerWorker extends Thread {
         aClientSocket.close();
     }
 
-    private void handleLogin(OutputStream outputStream, String[] tokens) throws IOException {
+    private void handleLogin(OutputStream outputStream, @NotNull String[] tokens) throws IOException {
         if(tokens.length == 3) {
             String login = tokens[1];
             String password = tokens[2];
@@ -104,15 +149,20 @@ public class ServerWorker extends Thread {
         }
     }
 
+    public boolean isMemberOfTopic(String topic) {
+        return topicSet.contains(topic);
+    }
+    public String getLogin() {
+        return aLogin.get();
+    }
+
     private void send(String msg) throws IOException {
         if(msg != null) {
             OutputStream outputStream = aClientSocket.getOutputStream();
-            String finalMessage = new Date() + " New Message: " + msg + "\n";
+            String finalMessage = new Date() +": " + msg + "\n";
             outputStream.write(finalMessage.getBytes());
         }
     }
 
-    public String getLogin() {
-        return aLogin.get();
-    }
+
 }
