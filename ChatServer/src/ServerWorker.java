@@ -131,7 +131,6 @@ public class ServerWorker extends Thread {
 
                 // Show who is online
                 for(ServerWorker s : serverWorkers) {
-                    if(s.equals(this)) continue;
 
                     String userMessage;
                     try {

@@ -15,6 +15,7 @@ public class ChatClient {
     private InputStream serverIn;
     private BufferedReader bufferedIn;
     private List<UserStatusListener> userStatusListeners = new ArrayList<>();
+    private List<MessageListener> messageListeners = new ArrayList<>();
 
     public ChatClient(String pServerName, int pServerPort) {
         this.aServerName = pServerName;
@@ -35,12 +36,25 @@ public class ChatClient {
                     System.out.println("OFFLINE:" + login);
                 }
             });
+
+            client.addMessageListener(new MessageListener() {
+                @Override
+                public void onLogin(String fromLogin, String body) {
+                    System.out.println("You got a message from: " + fromLogin + " ===> " + body + "\n");
+                }
+            });
             if (!client.connect()) {
                 System.err.println("Connection failed");
             }
             System.out.println("Connection successful");
             if(client.login("admin", "admin")) {
                 System.out.println("Login successful");
+
+                // Implementing message command
+                client.msg("Bruh", "Hello World");
+                // Implementing logoff command
+                
+                //client.logoff();
             } else {
                 System.err.println("Login failed");
             }
@@ -48,6 +62,16 @@ public class ChatClient {
         } catch(IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void msg(String recipient, String body) throws IOException {
+        String cmd = "msg " + recipient + " " + body + "\n";
+        serverOut.write(cmd.getBytes());
+    }
+
+    public void logoff() throws IOException {
+        String cmd = "quit";
+        serverOut.write(cmd.getBytes());
     }
 
     public void addUserStatusListener(@NotNull UserStatusListener listener) {
@@ -58,7 +82,14 @@ public class ChatClient {
         userStatusListeners.remove(listener);
     }
 
-    private boolean login(String login, String password) throws IOException {
+    public void addMessageListener(@NotNull MessageListener listener) {
+        messageListeners.add(listener);
+    }
+    public void removeMessageListener(@NotNull MessageListener listener) {
+        messageListeners.remove(listener);
+    }
+
+    public boolean login(String login, String password) throws IOException {
         String cmd = "login " + login + " " + password + "\n";
         serverOut.write(cmd.getBytes());
         String response = bufferedIn.readLine();
@@ -93,6 +124,9 @@ public class ChatClient {
                         handleOnline(tokens);
                     } else if(cmd.equalsIgnoreCase("offline")) {
                         handleOffline(tokens);
+                    } else if(cmd.equalsIgnoreCase("msg")) {
+                        String[] tokensMsg = StringUtils.split(line, null, 3);
+                        handleMessage(tokensMsg);
                     }
                 }
             }
@@ -103,6 +137,15 @@ public class ChatClient {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+        }
+    }
+
+    private void handleMessage(String[] tokens) {
+        String login = tokens[1];
+        String body = tokens[2];
+
+        for(MessageListener listener : messageListeners) {
+            listener.onLogin(login, body);
         }
     }
 
@@ -120,7 +163,7 @@ public class ChatClient {
         }
     }
 
-    private boolean connect() {
+    public boolean connect() {
         try {
              this.socket = new Socket(aServerName, aServerPort);
              System.out.println("Client port is: " + socket.getLocalPort());
