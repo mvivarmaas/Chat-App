@@ -89,6 +89,11 @@ public class ChatClient {
                 String[] tokens = StringUtils.split(line);
                 if(tokens != null && tokens.length > 0) {
                     String cmd = tokens[0];
+                    if(cmd.equalsIgnoreCase("online")) {
+                        handleOnline(tokens);
+                    } else if(cmd.equalsIgnoreCase("offline")) {
+                        handleOffline(tokens);
+                    }
                 }
             }
         } catch(Exception e) {
@@ -98,6 +103,20 @@ public class ChatClient {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+        }
+    }
+
+    private void handleOffline(String[] tokens) {
+        String login = tokens[1];
+        for(UserStatusListener listener : userStatusListeners) {
+            listener.offline(login);
+        }
+    }
+
+    private void handleOnline(String[] tokens) {
+        String login = tokens[1];
+        for(UserStatusListener listener : userStatusListeners) {
+            listener.online(login);
         }
     }
 

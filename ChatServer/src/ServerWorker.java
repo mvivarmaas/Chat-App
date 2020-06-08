@@ -103,7 +103,7 @@ public class ServerWorker extends Thread {
         server.removeWorker(this);
         for(ServerWorker s : server.getServerWorkers()) {
             if(s.equals(this)) continue;
-            s.send(this.getLogin() + " has logged off.");
+            s.send("offline " + this.getLogin());
             System.out.println(this.getLogin() + " has logged off.");
         }
         aClientSocket.close();
@@ -121,7 +121,7 @@ public class ServerWorker extends Thread {
                 System.out.println("User successfully logged in:" + aLogin.get());
 
                 List<ServerWorker> serverWorkers = server.getServerWorkers();
-                String onlineMessage = aLogin.get() + " is online.\n";
+                String onlineMessage = "online " + aLogin.get() + "\n";
                 // Broadcast user is online and show who is online
                 for(ServerWorker s : serverWorkers) {
                     if(s.equals(this)) continue;
@@ -135,7 +135,7 @@ public class ServerWorker extends Thread {
 
                     String userMessage;
                     try {
-                        userMessage = s.getLogin() + " is online.";
+                        userMessage = "online " + s.getLogin() + "\n";
                     } catch(NullPointerException e) {
                         continue;
                     }
@@ -159,7 +159,7 @@ public class ServerWorker extends Thread {
     private void send(String msg) throws IOException {
         if(msg != null) {
             OutputStream outputStream = aClientSocket.getOutputStream();
-            String finalMessage = new Date() +": " + msg + "\n";
+            String finalMessage =  msg + "\n";
             outputStream.write(finalMessage.getBytes());
         }
     }
