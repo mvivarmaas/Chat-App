@@ -1,0 +1,2 @@
+Known issues:
+  1. Message window is not seeing messages sent from command line.
